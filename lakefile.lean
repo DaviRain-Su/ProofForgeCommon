@@ -27,7 +27,8 @@ lean_lib ProofForgeCore where
     `ProofForge.Crypto.Keccak,
     `ProofForge.Crypto.Sha256,
     `ProofForge.Crypto.Sha256Compat,
-    `ProofForge.Profile
+    `ProofForge.Profile,
+    `ProofForge.RuntimeImports
   ]
 
 /-- Pure-Core specs. Namespace deliberately outside `ProofForge.*` and `Tests.*`:
