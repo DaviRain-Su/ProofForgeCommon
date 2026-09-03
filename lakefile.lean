@@ -30,5 +30,8 @@ lean_lib ProofForgeCore where
     `ProofForge.Profile
   ]
 
-lean_lib Tests where
-  globs := #[.one `Tests, .submodules `Tests]
+/-- Distinctly named so consumer repos keep their own `Tests` lib without
+    Lake namespace-claim collisions (a dep lib named `Tests` would claim
+    `Tests.*` module resolution away from the consumer). -/
+lean_lib ProofForgeCoreTests where
+  globs := #[.submodules `Tests]
