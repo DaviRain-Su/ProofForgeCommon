@@ -92,7 +92,8 @@ public def mergedSearchPath (rootModules : Array Lean.Name) : IO Unit := do
         for sc in sidecars do
           if ← sc.pathExists then present := present.push sc
         artifacts := artifacts.push (mod, olean, present)
-        let imports ← directImports? (System.FilePath.withExtension olean "ilean")
+        let ilean := System.FilePath.withExtension olean "ilean"
+        let imports ← if ← ilean.pathExists then directImports? ilean else pure #[]
         for name in imports do
           queue := queue.push name
   if missing.isEmpty && !artifacts.isEmpty then
