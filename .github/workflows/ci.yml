@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: .
+          auto-config: false
+          use-github-cache: true
+      - name: Build
+        run: lake build
+      - name: Core specs
+        run: |
+          lake build Tests.CoreCodecSpec
+          lake build Tests.CoreCollectionsSpec
+          lake build Tests.CoreMathSpec
