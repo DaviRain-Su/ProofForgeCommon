@@ -108,7 +108,12 @@ public def mergedSearchPath (rootModules : Array Lean.Name) : IO Unit := do
         IO.FS.createDirAll dst.parent.get!
       IO.FS.writeBinFile dst (← IO.FS.readBinFile olean)
       for sc in sidecars do
-        let dstSide := System.FilePath.withExtension dst (sc.extension.getD "ilean")
+        -- Keep the FULL source suffix (e.g. `Init.olean.private`), not just
+        -- its last extension component; `withExtension dst "private"` would
+        -- produce `Init.private`, which Lean never looks up.
+        let srcName := sc.fileName.getD ""
+        let dstName := dst.fileName.getD ""
+        let dstSide := mergeDir / (dstName ++ srcName.drop dstName.length)
         IO.FS.writeBinFile dstSide (← IO.FS.readBinFile sc)
     Lean.searchPathRef.set (mergeDir :: dirs₀)
   else
