@@ -59,19 +59,33 @@ private def allDirs : IO (List System.FilePath) := do
 
 variable [Inhabited System.FilePath]
 
-/-- Resolve the transitive import closure of `rootModules` file-existence-first
-    across the current search path plus `LEAN_PATH`, then set the search path
-    to a merged view that resolves every module. Falls back to the plain
-    search path when the closure is incomplete. -/
+/-- The search path for runtime `importModules` in multi-package workspaces.
+
+    Lean's module lookup (`System.SearchPath.findWithExt`) short-circuits on
+    the first entry whose module-root *directory* exists. Consumer and
+    dependency packages both own files under `ProofForge/`, so whichever
+    entry comes first shadows modules that only exist in later entries
+    (e.g. `ProofForge.Attr` lives only in proofforge-common).
+
+    Resolution: walk the transitive import closure of `rootModules`
+    file-existence-first; for every module whose olean does NOT live in the
+    first search-path entry, copy its artifacts into a gap-filling directory
+    and put that directory FIRST. Modules already supplied by the first entry
+    stay untouched, so no module is materialized twice and import order
+    ambiguity disappears.
+
+    Falls back to the plain search path when the closure is incomplete. -/
 public def mergedSearchPath (rootModules : Array Lean.Name) : IO Unit := do
   let dirs₀ ← allDirs
+  let firstDir := dirs₀.headD (System.FilePath.mk ".")
   let mut visited : Std.HashSet Lean.Name := {}
   -- `Init` is imported implicitly (prelude) by every module; it never
   -- appears in any ilean's directImports, so seed it explicitly.
   let mut queue : Array Lean.Name := rootModules.push `Init
   let mut missing : Array Lean.Name := #[]
-  -- module → (olean, sidecars) real paths
-  let mut artifacts : Array (Lean.Name × System.FilePath × Array System.FilePath) := #[]
+  -- module → (olean, sidecars) real paths, ONLY for modules the first
+  -- search-path entry cannot supply.
+  let mut gaps : Array (Lean.Name × System.FilePath × Array System.FilePath) := #[]
   repeat
     if queue.isEmpty then break
     let mod := queue[0]!
@@ -87,26 +101,27 @@ public def mergedSearchPath (rootModules : Array Lean.Name) : IO Unit := do
     match found with
     | none => missing := missing.push mod
     | some olean =>
-        let sidecars := ["ilean", "olean.private", "olean.server", "ir"]
-          |>.map (System.FilePath.withExtension olean ·)
-          |>.filter (fun p => p.toString != olean.toString)
-        let mut present : Array System.FilePath := #[]
-        for sc in sidecars do
-          if ← sc.pathExists then present := present.push sc
-        artifacts := artifacts.push (mod, olean, present)
+        let firstOlean := Lean.modToFilePath firstDir mod "olean"
+        if !(← firstOlean.pathExists) then
+          let sidecars := ["ilean", "olean.private", "olean.server", "ir"]
+            |>.map (System.FilePath.withExtension olean ·)
+          let mut present : Array System.FilePath := #[]
+          for sc in sidecars do
+            if ← sc.pathExists then present := present.push sc
+          gaps := gaps.push (mod, olean, present)
         let ilean := System.FilePath.withExtension olean "ilean"
         let imports ← if ← ilean.pathExists then directImports? ilean else pure #[]
         for name in imports do
           queue := queue.push name
-  if missing.isEmpty && !artifacts.isEmpty then
-    let mergeDir : System.FilePath :=
+  if missing.isEmpty && !gaps.isEmpty then
+    let gapDir : System.FilePath :=
       ((← IO.getEnv "XDG_RUNTIME_DIR") |>.getD ((← IO.getEnv "TMPDIR") |>.getD "/tmp"))
-        / "pf-lean-merged"
+        / "pf-lean-gap"
     -- Stale artifacts from earlier runs (possibly built against a different
     -- dependency revision) must not mix with the current closure.
-    try IO.FS.removeDirAll mergeDir catch _ => pure ()
-    for (mod, olean, sidecars) in artifacts do
-      let dst := Lean.modToFilePath mergeDir mod "olean"
+    try IO.FS.removeDirAll gapDir catch _ => pure ()
+    for (mod, olean, sidecars) in gaps do
+      let dst := Lean.modToFilePath gapDir mod "olean"
       if !(← dst.parent.get!.pathExists) then
         IO.FS.createDirAll dst.parent.get!
       IO.FS.writeBinFile dst (← IO.FS.readBinFile olean)
@@ -116,9 +131,9 @@ public def mergedSearchPath (rootModules : Array Lean.Name) : IO Unit := do
         -- produce `Init.private`, which Lean never looks up.
         let srcName := sc.fileName.getD ""
         let dstName := dst.fileName.getD ""
-        let dstSide := mergeDir / (dstName ++ srcName.drop dstName.length)
+        let dstSide := gapDir / (dstName ++ srcName.drop dstName.length)
         IO.FS.writeBinFile dstSide (← IO.FS.readBinFile sc)
-    Lean.searchPathRef.set (mergeDir :: dirs₀)
+    Lean.searchPathRef.set (gapDir :: dirs₀)
   else
     Lean.searchPathRef.set dirs₀
 
