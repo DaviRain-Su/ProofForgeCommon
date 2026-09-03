@@ -18,6 +18,12 @@ structure Registration (SrcValExt : Type) (SrcOpExt : Type → Type)
     Except String (OpExt (Core.Ops.Val ValExt))
   projectionError : String → String → String := fun _ reason => reason
   valArity : ValExt → Nat
+  /-- Operand-count policy for target value extensions. Default: exact arity.
+    Targets whose leaves admit a variable operand count (e.g. Psy hash leaves
+    whose array literals flatten to individual operands) override this with a
+    maximum-based check. -/
+  valArityAllows : ValExt → Nat → Bool :=
+    fun kind n => n == valArity kind
   opWellFormed : Core.Ops.Op ValExt OpExt → Bool
   cfgDialect : Core.CFG.Dialect ValExt OpExt
 
@@ -59,7 +65,7 @@ partial def projectVal
   | .ext kind operands => do
       let targetKind ← registration.projectValExt kind
       let targetOperands ← operands.mapM (projectVal registration)
-      unless targetOperands.size == registration.valArity targetKind do
+      unless registration.valArityAllows targetKind targetOperands.size do
         throw s!"extract/ir: malformed {registration.name} value extension"
       return .ext targetKind targetOperands
 
