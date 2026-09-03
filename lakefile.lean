@@ -29,3 +29,8 @@ lean_lib ProofForgeCore where
     `ProofForge.Crypto.Sha256Compat,
     `ProofForge.Profile
   ]
+
+/-- Pure-Core specs. Namespace deliberately outside `ProofForge.*` and `Tests.*`:
+    a dep glob over either would claim that namespace away from consumer repos. -/
+lean_lib ProofForgeCoreTests where
+  globs := #[.submodules `ProofForgeCoreTests]

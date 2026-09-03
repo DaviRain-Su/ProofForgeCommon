@@ -5,7 +5,7 @@ Pure Core schema/codec guards shared by every target repository. Aggregate bound
 extraction, EVM ABI planning, and typed-method guards remain in each target repo.
 -/
 
-namespace Tests.CoreCodecSpec
+namespace ProofForgeCoreTests.CoreCodecSpec
 
 open ProofForge.Core.Codec
 
@@ -105,4 +105,4 @@ private def staticRequest : Schema :=
   | .error reason => reason.contains "target-owned option tag policy"
   | .ok _ => false
 
-end Tests.CoreCodecSpec
+end ProofForgeCoreTests.CoreCodecSpec

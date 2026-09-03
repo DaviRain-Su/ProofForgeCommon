@@ -6,7 +6,7 @@ Pure Core collections semantics shared by every target repository. The extractio
 compile-probe remains in each target repository's own spec.
 -/
 
-namespace Tests.CoreCollectionsSpec
+namespace ProofForgeCoreTests.CoreCollectionsSpec
 
 open ProofForge.Core.Value
 
@@ -348,4 +348,4 @@ private def emptyText : BoundedString 2 :=
 end ByteAndStringSemantics
 
 
-end Tests.CoreCollectionsSpec
+end ProofForgeCoreTests.CoreCollectionsSpec

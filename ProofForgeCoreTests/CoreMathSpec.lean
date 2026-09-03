@@ -7,7 +7,7 @@ and square-root Core math. Target extraction behavior is covered in each target
 repository's own spec.
 -/
 
-namespace Tests.CoreMathSpec
+namespace ProofForgeCoreTests.CoreMathSpec
 
 open ProofForge.Core
 
@@ -225,4 +225,4 @@ private def validCeilRoot (value : UInt64) : Bool :=
 #guard validCeilRoot 0x8000000000000000
 #guard validCeilRoot u64Max
 
-end Tests.CoreMathSpec
+end ProofForgeCoreTests.CoreMathSpec
