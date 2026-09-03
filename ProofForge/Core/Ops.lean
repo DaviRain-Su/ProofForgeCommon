@@ -169,41 +169,51 @@ inductive Op (ValExt : Type) (OpExt : Type → Type) where
 
 instance : Inhabited (Op ValExt OpExt) := ⟨.errorOverflow⟩
 
-/-- Check extension arity and all recursively contained common values. -/
-partial def Val.wellFormed (arity : Ext → Nat) : Val Ext → Bool
+/-- Check extension arity and all recursively contained common values.
+    `extArityAllows` decides the operand-count policy for extension leaves
+    (exact vs. maximum arity is target-owned). -/
+partial def Val.wellFormed (arity : Ext → Nat) (extArityAllows : Ext → Nat → Bool :=
+    fun kind n => n == arity kind) : Val Ext → Bool
   | .arg _ | .local _ | .lit _ | .loopIx => true
-  | .field base _ | .bitNot base => base.wellFormed arity
+  | .field base _ | .bitNot base => base.wellFormed arity extArityAllows
   | .bitAnd lhs rhs | .bitOr lhs rhs | .bitXor lhs rhs
   | .shiftL lhs rhs | .shiftR lhs rhs
   | .addU64 lhs rhs | .subU64 lhs rhs | .mulU64 lhs rhs
   | .divU64 lhs rhs | .modU64 lhs rhs =>
-      lhs.wellFormed arity && rhs.wellFormed arity
-  | .indexGet base _ idx _ _ => base.wellFormed arity && idx.wellFormed arity
+      lhs.wellFormed arity extArityAllows && rhs.wellFormed arity extArityAllows
+  | .indexGet base _ idx _ _ =>
+      base.wellFormed arity extArityAllows && idx.wellFormed arity extArityAllows
   | .select _ lhs rhs thn els =>
-      lhs.wellFormed arity && rhs.wellFormed arity &&
-        thn.wellFormed arity && els.wellFormed arity
+      lhs.wellFormed arity extArityAllows && rhs.wellFormed arity extArityAllows &&
+        thn.wellFormed arity extArityAllows && els.wellFormed arity extArityAllows
   | .ext kind operands =>
-      operands.size == arity kind && operands.all (wellFormed arity)
+      extArityAllows kind operands.size &&
+        operands.all (wellFormed arity extArityAllows)
 
 /-- Walk common control flow while allowing the caller to inspect target extension payloads. -/
 partial def Op.wellFormed (arity : ValExt → Nat)
+    (extArityAllows : ValExt → Nat → Bool :=
+      fun kind n => n == arity kind)
     (validExt : OpExt (Val ValExt) → Bool) : Op ValExt OpExt → Bool
   | .letLocal _ value | .setLocal _ value | .forAccum _ value _
   | .storeField _ value | .okState value | .returnU64 value | .returnState value =>
-      value.wellFormed arity
+      value.wellFormed arity extArityAllows
   | .joinLocal _ | .errorOverflow | .errorNamed _ => true
-  | .errorTyped frame => frame.wellFormed (·.wellFormed arity)
+  | .errorTyped frame => frame.wellFormed (·.wellFormed arity extArityAllows)
   | .checkedAddU64 lhs rhs | .checkedSubU64 lhs rhs | .checkedMulU64 lhs rhs
   | .checkedDivU64 lhs rhs | .checkedModU64 lhs rhs =>
-      lhs.wellFormed arity && rhs.wellFormed arity
+      lhs.wellFormed arity extArityAllows && rhs.wellFormed arity extArityAllows
   | .ite _ lhs rhs thn els =>
-      lhs.wellFormed arity && rhs.wellFormed arity &&
-        thn.all (wellFormed arity validExt) && els.all (wellFormed arity validExt)
-  | .forBody _ body => body.all (wellFormed arity validExt)
-  | .emitEvent _ payload => payload.wellFormed arity
-  | .externalCall _ args => args.all (·.wellFormed arity)
-  | .indexSetLeaf _ idx value _ _ => idx.wellFormed arity && value.wellFormed arity
-  | .indexSet _ idx value _ _ => idx.wellFormed arity && value.wellFormed arity
+      lhs.wellFormed arity extArityAllows && rhs.wellFormed arity extArityAllows &&
+        thn.all (wellFormed arity extArityAllows validExt) &&
+          els.all (wellFormed arity extArityAllows validExt)
+  | .forBody _ body => body.all (wellFormed arity extArityAllows validExt)
+  | .emitEvent _ payload => payload.wellFormed arity extArityAllows
+  | .externalCall _ args => args.all (·.wellFormed arity extArityAllows)
+  | .indexSetLeaf _ idx value _ _ =>
+      idx.wellFormed arity extArityAllows && value.wellFormed arity extArityAllows
+  | .indexSet _ idx value _ _ =>
+      idx.wellFormed arity extArityAllows && value.wellFormed arity extArityAllows
   | .ext payload => validExt payload
 
 end ProofForge.Core.Ops
