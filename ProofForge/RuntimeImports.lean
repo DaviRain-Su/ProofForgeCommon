@@ -66,7 +66,9 @@ variable [Inhabited System.FilePath]
 public def mergedSearchPath (rootModules : Array Lean.Name) : IO Unit := do
   let dirs₀ ← allDirs
   let mut visited : Std.HashSet Lean.Name := {}
-  let mut queue : Array Lean.Name := rootModules
+  -- `Init` is imported implicitly (prelude) by every module; it never
+  -- appears in any ilean's directImports, so seed it explicitly.
+  let mut queue : Array Lean.Name := rootModules.push `Init
   let mut missing : Array Lean.Name := #[]
   -- module → (olean, sidecars) real paths
   let mut artifacts : Array (Lean.Name × System.FilePath × Array System.FilePath) := #[]
