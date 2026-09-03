@@ -102,6 +102,9 @@ public def mergedSearchPath (rootModules : Array Lean.Name) : IO Unit := do
     let mergeDir : System.FilePath :=
       ((← IO.getEnv "XDG_RUNTIME_DIR") |>.getD ((← IO.getEnv "TMPDIR") |>.getD "/tmp"))
         / "pf-lean-merged"
+    -- Stale artifacts from earlier runs (possibly built against a different
+    -- dependency revision) must not mix with the current closure.
+    try IO.FS.removeDirAll mergeDir catch _ => pure ()
     for (mod, olean, sidecars) in artifacts do
       let dst := Lean.modToFilePath mergeDir mod "olean"
       if !(← dst.parent.get!.pathExists) then
