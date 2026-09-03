@@ -183,8 +183,7 @@ partial def Val.wellFormed (arity : Ext → Nat) : Val Ext → Bool
       lhs.wellFormed arity && rhs.wellFormed arity &&
         thn.wellFormed arity && els.wellFormed arity
   | .ext kind operands =>
-      -- `arity` is the maximum admitted operand count for the kind.
-      operands.size <= arity kind && operands.all (wellFormed arity)
+      operands.size == arity kind && operands.all (wellFormed arity)
 
 /-- Walk common control flow while allowing the caller to inspect target extension payloads. -/
 partial def Op.wellFormed (arity : ValExt → Nat)

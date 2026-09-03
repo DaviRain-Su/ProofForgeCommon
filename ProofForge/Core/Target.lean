@@ -59,7 +59,7 @@ partial def projectVal
   | .ext kind operands => do
       let targetKind ← registration.projectValExt kind
       let targetOperands ← operands.mapM (projectVal registration)
-      unless targetOperands.size <= registration.valArity targetKind do
+      unless targetOperands.size == registration.valArity targetKind do
         throw s!"extract/ir: malformed {registration.name} value extension"
       return .ext targetKind targetOperands
 
