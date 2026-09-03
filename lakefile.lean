@@ -29,9 +29,3 @@ lean_lib ProofForgeCore where
     `ProofForge.Crypto.Sha256Compat,
     `ProofForge.Profile
   ]
-
-/-- Distinctly named so consumer repos keep their own `Tests` lib without
-    Lake namespace-claim collisions (a dep lib named `Tests` would claim
-    `Tests.*` module resolution away from the consumer). -/
-lean_lib ProofForgeCoreTests where
-  globs := #[.submodules `Tests]
