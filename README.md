@@ -12,6 +12,9 @@ Single source of truth for:
 - `ProofForge.Core.*` — target-neutral IR, Ops, CFG, projection (`Core.Target`), codec,
   schema, value, math, fixed-point, collections, safe-cast, eval, except
 - `ProofForge.Crypto.*` — Sha256 / Keccak (host + source-level semantics)
+- `ProofForge.Quint.*` — default target: extension-free dialect
+  (`ProofForge.Quint.Ops`), the default `Core.Target.Registration`, and a
+  source-only Quint (`.qnt`) emitter for hand-built Core programs
 - `ProofForge.Profile` — compile-root profile checks
 
 Depends on Lean + Std only. No Mathlib, no target SDKs, no extractors.
