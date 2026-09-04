@@ -38,3 +38,9 @@ lean_lib ProofForgeCore where
     a dep glob over either would claim that namespace away from consumer repos. -/
 lean_lib ProofForgeCoreTests where
   globs := #[.submodules `ProofForgeCoreTests]
+
+/-- Writes the shared Quint fixtures as `.qnt` modules; the CI Quint CLI gate
+    parses and typechecks them with the real Quint toolchain. Root namespace
+    stays outside `ProofForge.*` for the same reason as the specs. -/
+lean_exe quintEmit where
+  root := `ProofForgeQuintTool.Main

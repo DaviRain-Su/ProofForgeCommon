@@ -69,6 +69,68 @@ jobs:
           path: .lake/build
           key: lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
 
+  quint:
+    # Exercises the Quint default target end to end: build the emitter exe,
+    # compile the shared fixtures to .qnt modules, then parse and typecheck
+    # them with the real Quint CLI (pinned, matching the emitter's syntax
+    # baseline). `quint run` is intentionally not gated: the evaluator rejects
+    # PF_MAX_U64 (outside i64), a limitation the source-only target documents.
+    name: Quint CLI gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install elan
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://elan.lean-lang.org/elan-init.sh -o elan-init.sh
+          sh elan-init.sh -y --default-toolchain none
+          rm elan-init.sh
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Cache toolchain and Lean dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.elan/toolchains
+            .lake/packages
+          key: toolchains-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}
+          restore-keys: toolchains-${{ runner.os }}-
+
+      - name: Prepare pinned toolchain
+        run: |
+          elan toolchain install "$(tr -d '[:space:]' <lean-toolchain)"
+          lake --version
+
+      # Restore-only: the Lean job owns saving so this job never evicts.
+      - name: Restore Lean build products
+        uses: actions/cache/restore@v4
+        with:
+          path: .lake/build
+          key: lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
+          restore-keys: lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-
+
+      - name: Build emitter
+        run: lake build quintEmit
+
+      - name: Emit fixture .qnt modules
+        run: ./.lake/build/bin/quintEmit build/quint
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Quint parse + typecheck
+        run: |
+          set -euo pipefail
+          for f in build/quint/*.qnt; do
+            echo "== $f"
+            npx -y @informalsystems/quint@0.32.0 parse "$f"
+            npx -y @informalsystems/quint@0.32.0 typecheck "$f"
+          done
+
   tag-consistency:
     # Release tags are milestones on main; consumers that need a reproducible
     # build may pin one, but a tag lagging behind main would advertise stale

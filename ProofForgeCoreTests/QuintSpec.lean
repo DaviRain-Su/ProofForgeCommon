@@ -1,36 +1,18 @@
 import ProofForge.Quint.Emit
+import ProofForgeCoreTests.QuintFixtures
 
 /-!
 Specs for the Quint default target: dialect, registration, and the `.qnt`
-emitter (`ProofForge.Quint.Emit`). Fixtures are hand-built extension-free Core
-programs; golden substrings pin the emitted Quint surface.
+emitter (`ProofForge.Quint.Emit`). Fixture programs live in
+`ProofForgeCoreTests.QuintFixtures` (shared with the `quintEmit` executable);
+golden substrings pin the emitted Quint surface.
 -/
 
 namespace ProofForgeCoreTests.QuintSpec
 open ProofForge
 open ProofForge.Core
+open ProofForgeCoreTests.QuintFixtures
 
-private abbrev V := Core.Ops.Val Quint.Ops.ValKind
-private abbrev O := Core.Ops.Op Quint.Ops.ValKind Quint.Ops.OpExt
-
-private def stateRead : V := .field (.arg 0) "value"
-
-/-- Canonical counter: guard-folded increment, per-leaf `returnState` init,
-    expression view. -/
-private def counter : IR.Program Quint.Ops.ValKind Quint.Ops.OpExt :=
-  { name := "Counter"
-    slots := #[{ name := "value" }]
-    methods := #[
-      { kind := .init, name := "init", ixName := "initialize", paramCount := 1,
-        ops := #[.returnState (.arg 0)] },
-      { kind := .increment, name := "increment", ixName := "increment",
-        paramCount := 1,
-        ops := #[
-          .checkedAddU64 stateRead (.arg 0),
-          .okState (.lit 0),
-          .errorOverflow ] },
-      { kind := .get, name := "get", ixName := "get", paramCount := 0,
-        ops := #[.returnU64 stateRead] } ] }
 
 private def counterText : String :=
   match Quint.Emit.compileProgram counter with
@@ -62,21 +44,6 @@ private def counterText : String :=
 #guard counterText.contains "pf_last_action' = 1"
 #guard counterText.contains "pf_state_value' = pf_init_arg0"
 
-/-- Guarded mutate: `ite` with an explicit-store arm and a declared-revert arm
-    flattens to conditional assignments with a 256+ revert code. -/
-private def guarded : IR.Program Quint.Ops.ValKind Quint.Ops.OpExt :=
-  { name := "Guarded"
-    slots := #[{ name := "value" }]
-    methods := #[
-      { kind := .init, name := "init", ixName := "initialize", paramCount := 0,
-        ops := #[.returnState (.lit 0)] },
-      { kind := .increment, name := "deposit", ixName := "deposit",
-        paramCount := 1,
-        ops := #[
-          .ite .lt (.arg 0) (.lit 100)
-            #[.storeField "value" (.addU64 stateRead (.arg 0)), .okState (.lit 1)]
-            #[.errorNamed "TooLarge"] ] } ] }
-
 private def guardedText : String :=
   match Quint.Emit.compileProgram guarded with
   | .ok text => text
@@ -92,17 +59,6 @@ private def guardedText : String :=
   guardedText.contains
     "val resR = if (pf_arg_a1_0 < 100) 1 else pf_last_deposit_result"
 
-/-- Two slots, explicit store to one leaf: the other stutters. Two entries
-    render as two `any` branches. -/
-private def twoSlots : IR.Program Quint.Ops.ValKind Quint.Ops.OpExt :=
-  { name := "TwoSlots"
-    slots := #[{ name := "a" }, { name := "b" }]
-    methods := #[
-      { kind := .increment, name := "setA", ixName := "setA", paramCount := 1,
-        ops := #[.storeField "a" (.arg 0), .okState (.lit 0)] },
-      { kind := .increment, name := "setB", ixName := "setB", paramCount := 1,
-        ops := #[.storeField "b" (.arg 0), .okState (.lit 0)] } ] }
-
 private def twoSlotsText : String :=
   match Quint.Emit.compileProgram twoSlots with
   | .ok text => text
@@ -117,17 +73,6 @@ private def twoSlotsText : String :=
 -- Per-entry instrumentation: the other entry's vars stutter in each branch.
 #guard twoSlotsText.contains "pf_last_setA_result' = pf_last_setA_result"
 #guard twoSlotsText.contains "pf_last_setB_result' = pf_last_setB_result"
-
-/-- Branching view: both arms return, lowered to one if-then-else. -/
-private def branchingView : IR.Program Quint.Ops.ValKind Quint.Ops.OpExt :=
-  { name := "Bounded"
-    slots := #[{ name := "value" }]
-    methods := #[
-      { kind := .get, name := "isLarge", ixName := "isLarge", paramCount := 0,
-        ops := #[
-          .ite .ge stateRead (.lit 10)
-            #[.returnU64 (.lit 1)]
-            #[.returnU64 (.lit 0)] ] } ] }
 
 #guard
   match Quint.Emit.compileProgram branchingView with
