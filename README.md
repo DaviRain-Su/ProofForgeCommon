@@ -32,12 +32,17 @@ attributes such as `pf_svm_raw*`) stay in the target repositories.
 ## Consuming
 
 ```lean
--- path require while iterating locally:
-require «proofforge-common» from "../ProofForgeCommon"
--- or pinned git require for CI / release:
 require «proofforge-common» from git
-  "https://github.com/DaviRain-Su/ProofForgeCommon.git" @ "<tag-or-sha>"
+  "https://github.com/DaviRain-Su/ProofForgeCommon.git" @ "main"
 ```
+
+Tracking `main` means a push here reaches the consumer repositories on their
+next build — no tag dance. `main` is branch-protected (the `Lean` CI check
+must pass), so a breakage is caught in this repository's CI before consumers
+ever see it; the consumers' CI doubles as the integration test.
+
+For a reproducible build (e.g. a release), a consumer may pin a commit SHA or
+a milestone tag instead; tags are cut manually for especially large features.
 
 `lean-toolchain` here is pinned to the same version as the consumer repositories;
 bump all five together.
