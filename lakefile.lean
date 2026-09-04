@@ -2,9 +2,10 @@ import Lake
 open Lake DSL
 
 package «proofforge-common» where
-  version := v!"0.1.0"
+  version := v!"0.2.0"
 
-/-- Shared ProofForge surface: Attr, Core (IR/Ops/CFG/Target/…), Crypto, Profile.
+/-- Shared ProofForge surface: Attr, Core (IR/Ops/CFG/Target/…), Crypto, Profile,
+    and the Quint default target (dialect, default registration, `.qnt` emitter).
     Single source for the EVM / SVM / NEAR / Psy target repositories. Depends on
     Lean + Std only — no Mathlib, no target SDKs, no extractors. -/
 @[default_target]
