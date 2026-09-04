@@ -25,8 +25,8 @@ Module paths mirror the consumer repositories (`ProofForge/Core/Codec.lean` …)
 ## Layout
 
 ```
-ProofForge/        shared library (lean_lib ProofForgeCore)
-Tests/             pure-Core specs (CoreCodecSpec, CoreCollectionsSpec, CoreMathSpec)
+ProofForge/            shared library (lean_lib ProofForgeCore)
+ProofForgeCoreTests/   pure-Core specs (CoreCodecSpec, CoreCollectionsSpec, CoreMathSpec, QuintSpec)
 ```
 
 Target-specific layers (target Runtimes, SDKs, extractors, CLI, and extended
@@ -53,6 +53,6 @@ bump all five together.
 ## Development
 
 ```sh
-lake build            # builds ProofForgeCore + Tests
-lake build Tests.CoreCodecSpec Tests.CoreCollectionsSpec Tests.CoreMathSpec
+lake build                       # builds ProofForgeCore only
+lake build ProofForgeCoreTests   # builds every spec module (what CI runs)
 ```

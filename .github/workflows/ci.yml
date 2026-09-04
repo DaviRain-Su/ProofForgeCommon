@@ -55,11 +55,11 @@ jobs:
       - name: Build Lean library
         run: lake build
 
+      # Plain `lake build` covers only @[default_target] (ProofForgeCore);
+      # build the whole spec lib so every current and future spec module runs
+      # (enumerating modules here let QuintSpec slip through once).
       - name: Core specs
-        run: |
-          lake build +ProofForgeCoreTests.CoreCodecSpec
-          lake build +ProofForgeCoreTests.CoreCollectionsSpec
-          lake build +ProofForgeCoreTests.CoreMathSpec
+        run: lake build ProofForgeCoreTests
 
       # Save only from main so PR runs do not evict the build cache.
       - name: Save Lean build products
